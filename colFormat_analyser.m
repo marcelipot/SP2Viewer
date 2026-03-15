@@ -1,0 +1,36 @@
+ColWidth{1} = 1; %ID
+ColWidth{2} = 150; %Name
+ColWidth{3} = 50; %Distance
+ColWidth{4} = 70; %Stroke
+ColWidth{5} = 50; %Gender
+ColWidth{6} = 80; %Round
+ColWidth{7} = 140; %Meet
+ColWidth{8} = 30; %Year
+ColWidth{9} = 40; %Lane
+ColWidth{10} = 40; %Course
+ColWidth{11} = 65; %Type
+ColWidth{12} = 50; %Category
+ColWidth{13} = 60; %Age Group
+ColWidth{14} = 60; %Race Time
+ColWidth{15} = 45; %Skills
+ColWidth{16} = 70; %Free Swim
+ColWidth{17} = 65; %Drop-off
+ColWidth{18} = 130; %Max. Speed
+ColWidth{19} = 155; %Av. SR
+ColWidth{20} = 133; %Av. DPS
+ColWidth{21} = 50; %Block
+ColWidth{22} = 50; %Start
+ColWidth{23} = 75; %Entry Dist
+ColWidth{24} = 115; %Start UW Speed
+ColWidth{25} = 110; %Start BO Dist
+ColWidth{26} = 110; %Start BO Skill
+ColWidth{27} = 65; %Av. Turn
+ColWidth{28} = 110; %Turn App Skill
+ColWidth{29} = 90; %Turn BO Dist
+ColWidth{30} = 110; %Turn BO Skill
+
+nCol = length(ColWidth(1,:));
+for col = 1:nCol;
+    ColFormat{col} = 'char';
+    ColEdit(col) = false;
+end;
