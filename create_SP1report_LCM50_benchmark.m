@@ -1,0 +1,2316 @@
+if ispc == 1;
+    font1 = 14;
+    font2 = 11;
+    font3 = 8;
+    font4 = 9.5;
+elseif ismac == 1;
+    font1 = 17;
+    font2 = 14;
+    font3 = 11;
+    font4 = 12.5;
+end;
+% resolution = get(0,'ScreenSize');
+% resolution = resolution(1,3:4);
+% if strcmpi(source, 'display') == 1;
+%     window_size = floor([(resolution(1)-1200)./2 0.05*resolution(2) 1200 resolution(2)-(0.1*resolution(2))]);
+%     hdef = figure('units', 'pixels', 'position', window_size, ...
+%         'Color', [1 1 1], 'resize', 'on', 'NumberTitle', 'off', 'name', 'Sparta - Report', ...
+%         'menubar', 'none', 'toolbar', 'none', 'windowstyle', 'normal');
+% else;
+%     window_size = floor([(resolution(1)-1200)./2 0.05*resolution(2) 1200 resolution(2)-(0.1*resolution(2))]);
+%     hdef = figure('units', 'pixels', 'position', window_size, ...
+%         'Color', [1 1 1], 'resize', 'on', 'NumberTitle', 'off', 'name', 'to delete', ...
+%         'menubar', 'none', 'toolbar', 'none', 'windowstyle', 'normal');
+% end;
+
+resolution = get(0, 'MonitorPositions');
+set(gcf, 'units', 'pixel');
+figPos = get(gcf, 'Position');
+set(gcf, 'units', 'normalized');
+
+screenValid = 0;
+for screenEC = 1:length(resolution(:,1));
+    screenLim1 = resolution(screenEC,1);
+    screenLim2 = screenLim1+resolution(screenEC,3)-1;
+
+    if figPos(1) >= screenLim1 & figPos(1) <= screenLim2;
+        screenValid = screenEC;
+    end;
+end;
+if screenValid == 0;
+    screenValid = 1;
+end;
+offsetLeft = resolution(screenValid,1);
+offsetBottom = resolution(screenValid,2);
+resolution = resolution(screenValid,3:4);
+
+offzetSize = 0; %370;
+if strcmpi(source, 'display') == 1;
+    window_size = floor([(resolution(1)-1200)./2 0.05*resolution(2) 1200 resolution(2)-(0.1*resolution(2))-offzetSize]);
+    window_size(1) = window_size(1) + offsetLeft;
+    window_size(2) = window_size(2) + offsetBottom + 5;
+
+    if window_size(3) < 1140 | window_size(4) < 575;
+        h = warndlg('Screen resolution below [1140 575]. Display could be impacted', 'Warning');
+        waitfor(h);
+    end;
+
+    hdef = figure('units', 'pixels', 'position', window_size, ...
+        'Color', [1 1 1], 'resize', 'on', 'NumberTitle', 'off', 'name', 'Sparta - Report', ...
+        'menubar', 'none', 'toolbar', 'none', 'windowstyle', 'normal');
+else;
+    resolution = [1920 1080];
+    window_size = floor([(resolution(1)-1200)./2 0.05*resolution(2) 1200 resolution(2)-(0.1*resolution(2))-offzetSize]);
+    hdef = figure('units', 'pixels', 'position', window_size, ...
+        'Color', [1 1 1], 'resize', 'on', 'NumberTitle', 'off', 'name', 'to delete', ...
+        'menubar', 'none', 'toolbar', 'none', 'windowstyle', 'normal');
+end;
+
+if ispc == 1;
+    MDIR = getenv('USERPROFILE');
+    jFrame=get(handle(hdef), 'javaframe');
+    jicon = javax.swing.ImageIcon([MDIR '\SP2Viewer\SpartaViewer_IconSoftware.png']);
+    jFrame.setFigureIcon(jicon);
+    clc;
+end;
+
+
+
+%--------------------------------------------------------------------------
+if strcmpi(source, 'display') == 1;
+    handles2.save_button_report = uicontrol('parent', hdef, 'Style', 'Pushbutton', ...
+        'Visible', 'on', 'units', 'pixels', ...
+        'position', [970 window_size(4)-50 200 30], 'callback', @savedata_report_benchmark, ...
+        'BackgroundColor', [0.9 0.9 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Book Antiqua', ...
+        'FontAngle', 'Italic', 'FontWeight', 'Bold', 'Fontsize', font1, 'String', 'Export to JPG');
+    set(handles2.save_button_report, 'fontunits', 'normalized', 'Units', 'Normalized');
+end;
+%--------------------------------------------------------------------------
+
+
+
+try;
+    handles2.tempFolder = handles.tempFolder;
+    handles2.databaseCurrent = databaseCurrent;
+    handles2.RaceDist = RaceDist;
+    handles2.Gender = Gender;
+    handles2.Course = Course;
+catch;
+    handles = handles2;
+    databaseCurrent = handles.databaseCurrent;
+    RaceDist = handles.RaceDist;
+    Gender = handles.Gender;
+    Course = handles.Course;
+end;
+
+
+
+%------------------------------Get the data--------------------------------
+Source = databaseCurrent{1,58};
+dataTableRefDist = [5:5:RaceDist]';
+if Source == 1 | Source == 3;
+    metaData_PDF = databaseCurrent{1,67};
+    dataTablePacing = databaseCurrent{1,68};
+    dataTableBreath = databaseCurrent{1,69};
+    dataTableStroke = databaseCurrent{1,70};
+    dataTableSkill = databaseCurrent{1,71};
+    if isnan(dataTablePacing(end,1)) == 1;
+        %race time missing
+        racetimemissing = databaseCurrent{1,14};
+        index1 = strfind(racetimemissing, ' ');
+        index2 = strfind(racetimemissing, 's');
+        index3 = strfind(racetimemissing, '!');
+        index = [index1 index2 index3];
+        if isempty(index) == 0;
+            racetimemissing(index) = [];
+        end;
+        dataTablePacing(end,1) = str2num(racetimemissing);
+    end;
+
+elseif Source == 2;
+    metaData_PDF = databaseCurrent{1,67};
+    dataTableAverage = databaseCurrent{1,68};
+    dataTableBreath = databaseCurrent{1,69};
+    dataTableSkillVAL = databaseCurrent{1,70};
+    dataTableSkillTXT = databaseCurrent{1,71};
+end;
+if Source == 1;
+    answerReport = 'SP1';
+elseif Source == 2;
+    answerReport = 'SP2';
+elseif Source == 3;
+    answerReport = 'GE';
+end;
+
+%---Metadata
+relayExist = databaseCurrent{1,11};
+if isempty(strfind(relayExist, 'Relay')) == 0;
+    isRelay = 1;
+else;
+    isRelay = 0;
+end;
+if isRelay == 1;
+    relayLeg = databaseCurrent{1,11};
+    index1 = strfind(relayLeg, '(');
+    index2 = strfind(relayLeg, ')');
+    relayLeg = relayLeg(index1+1:index2-1);
+    RelayType = [databaseCurrent{1,53} ' (' relayLeg ')'];
+else;
+    RelayType = 'Individual';
+end;
+
+AthletenameFull = databaseCurrent{1,2};
+index = strfind(AthletenameFull, ' ');
+Athletename = [AthletenameFull(index(end)+1:end) AthletenameFull(1)];
+Meet = databaseCurrent{1,7};
+Stage = databaseCurrent{1,6};
+Year = databaseCurrent{1,8};
+StrokeType = databaseCurrent{1,4};
+RaceDist = str2num(databaseCurrent{1,3});
+Course = str2num(databaseCurrent{1,10});
+AgeGroup = metaData_PDF{2,1}; %DOB
+Venue = metaData_PDF{3,1};
+AnalysisDate = metaData_PDF{4,1};
+RaceDate = metaData_PDF{7,1};
+KicksNb = databaseCurrent{1,64};
+if Source == 1 | Source == 3;
+    DiveT15 = dataTableSkill{15,3};
+    index = strfind(DiveT15, ' ');
+    DiveT15 = str2num(DiveT15(1:index(1)-1));
+elseif Source == 2;
+    DiveT15 = dataTableSkillVAL{1,5};
+end;
+
+idx = isstrprop(Meet,'upper');
+MeetShort = Meet(idx);
+if strcmpi(Stage, 'SemiFinal');
+    StageShort = 'SF';
+elseif strcmpi(Stage, 'Semi-final');
+    StageShort = 'SF';
+else;
+    StageShort = Stage;
+end;
+if strcmpi(lower(StrokeType), 'freestyle');
+    StrokeShort = 'FS';
+elseif strcmpi(lower(StrokeType), 'medley');
+    StrokeShort = 'IM';
+elseif strcmpi(lower(StrokeType), 'backstroke');
+    StrokeShort = 'BK';
+elseif strcmpi(lower(StrokeType), 'breaststroke');
+    StrokeShort = 'BR';
+elseif strcmpi(lower(StrokeType), 'butterfly');
+    StrokeShort = 'BF';
+end;
+        
+filename = [Athletename '_' num2str(RaceDist) StrokeShort '_' MeetShort Year '_' StageShort];
+
+if Course == 25;
+    Race = [num2str(RaceDist) 'm ' StrokeType ' (SCM)'];
+else;
+    Race = [num2str(RaceDist) 'm ' StrokeType ' (LCM)'];
+end;
+
+if Source == 1 | Source == 3;
+    AnalysisDate = ['Swim created at ' AnalysisDate];
+elseif Source == 2;
+    li1 = strfind(AnalysisDate, 'T');
+    li2 = strfind(AnalysisDate, '.');
+    AnalysisDate = AnalysisDate(1:li1-1);
+    AnalysisDate = [AnalysisDate(9:10) '-' AnalysisDate(6:7) '-' AnalysisDate(1:4)];
+    AnalysisDate = ['Swim created at ' AnalysisDate];
+end;
+    
+index = strfind(AgeGroup, '/');
+dateDiff(1) = datetime(str2num(AgeGroup(index(2)+1:end)), str2num(AgeGroup(index(1)+1:index(2)-1)), str2num(AgeGroup(1:index(1)-1)));
+index = strfind(RaceDate, '-');
+dateDiff(2) = datetime(str2num(RaceDate(1:index(1)-1)), str2num(RaceDate(index(1)+1:index(2)-1)), str2num(RaceDate(index(2)+1:end)));
+[DYear, DMonth, DDay] = split(caldiff(dateDiff, {'years';'months';'days'}), {'years';'months';'days'});
+
+if DYear > 18;
+    AgeGroup = 'Open';
+elseif DYear <= 18 & DYear > 17;
+    AgeGroup = '18y';
+elseif DYear <= 17 & DYear > 16;
+    AgeGroup = '17y';
+elseif DYear <= 16 & DYear > 15;
+    AgeGroup = '16y';
+elseif DYear <= 15 & DYear > 14;
+    AgeGroup = '15y';
+elseif DYear <= 14 & DYear > 13;
+    AgeGroup = '14y';
+else;
+    AgeGroup = '13y & under';
+end;
+Round = [AgeGroup ' - ' Stage];
+
+t = now;
+ReportDate = ['Report last generated at ' datestr(datetime(t,'ConvertFrom','datenum'))];
+
+%---Get splits & skills
+BOAllINI = [];
+if strcmpi(answerReport, 'SP1') == 1 | strcmpi(answerReport, 'GE') == 1;
+    %its a 50m so that short intervals
+    colinterest_Splits = 2;
+    colinterest_SplitsInterp = 4;
+    if dataTablePacing(3,colinterest_SplitsInterp) == 1;
+        Split15m = [timeSecToStr2(dataTablePacing(3,colinterest_Splits)) ' !'];
+    else;
+        Split15m = timeSecToStr2(dataTablePacing(3,colinterest_Splits));
+    end;
+
+    if dataTablePacing(5,colinterest_SplitsInterp) == 1;
+        Split25m = [timeSecToStr2(dataTablePacing(5,colinterest_Splits)) ' !'];
+    else;
+        Split25m = timeSecToStr2(dataTablePacing(5,colinterest_Splits));
+    end;
+
+    if dataTablePacing(7,colinterest_SplitsInterp) == 1;
+        Split35m = [timeSecToStr2(dataTablePacing(7,colinterest_Splits)) ' !'];
+    else;
+        Split35m = timeSecToStr2(dataTablePacing(7,colinterest_Splits));
+    end;
+
+    if dataTablePacing(9,colinterest_SplitsInterp) == 1;
+        Split45m = [timeSecToStr2(dataTablePacing(9,colinterest_Splits)) ' !'];
+    else;
+        Split45m = timeSecToStr2(dataTablePacing(9,colinterest_Splits));
+    end;
+
+    Split50m = timeSecToStr2(dataTablePacing(10,colinterest_Splits));
+
+    RaceTime = timeSecToStr2(dataTablePacing(end,colinterest_Splits));
+    
+    StartTime = dataToStr(DiveT15,2);
+    if dataTablePacing(3,colinterest_SplitsInterp) == 1;
+        StartTime = [StartTime ' !'];
+    end;
+    
+    Time25m = Split25m;
+    if dataTablePacing(5,colinterest_SplitsInterp) == 1;
+        Time25m = [Time25m ' !'];
+    end;
+    
+    valFinishTime = dataTableSkill{end-1,3};
+    index = strfind(valFinishTime, ' ');
+    valFinishTime = str2num(valFinishTime(1:index(1)-1));
+    FinishTime = timeSecToStr2(valFinishTime);
+
+    RT = dataTableSkill{16,3};
+    index = strfind(RT, ' ');
+    RT = str2num(RT(1:index(1)-1));
+
+    BOKick_Start = dataTableSkill{21,3};
+    index = strfind(BOKick_Start, ' ');
+    BOKick_Start = str2num(BOKick_Start(1:index(1)));
+
+    BOTime_Start = dataTableSkill{23,3};
+    index1 = strfind(BOTime_Start, ' ');
+    index2 = strfind(BOTime_Start, 's');
+    index3 = strfind(BOTime_Start, '!');
+    if isempty(index3) == 0;
+        interpolationBOTime_Start = 1;
+    else;
+        interpolationBOTime_Start = 0;
+    end;
+    index = [index1 index2 index3];
+    if isempty(index) == 0;
+        BOTime_Start(index) = [];
+    end;
+    BOTime_Start = str2num(BOTime_Start);
+
+    BODist_Start = dataTableSkill{22,3};
+    index1 = strfind(BODist_Start, ' ');
+    index2 = strfind(BODist_Start, 'm');
+    index3 = strfind(BODist_Start, '!');
+    if isempty(index3) == 0;
+        interpolationBODist_Start = 1;
+    else;
+        interpolationBODist_Start = 0;
+    end;
+    index = [index1 index2 index3];
+    if isempty(index) == 0;
+        BODist_Start(index) = [];
+    end;
+    BODist_Start = str2num(BODist_Start);
+    BOAllINI = [BOTime_Start BODist_Start BOKick_Start];
+
+elseif strcmpi(answerReport, 'SP2') == 1;
+    %take col = 12 for short intervals
+    Split15m = timeSecToStr2(dataTableAverage{3,12});
+    Split25m = timeSecToStr2(dataTableAverage{5,12});
+    Split35m = timeSecToStr2(dataTableAverage{7,12});
+    Split45m = timeSecToStr2(dataTableAverage{9,12});
+    Split50m = timeSecToStr2(dataTableAverage{10,12});
+
+    RaceTime = Split50m;
+%         SplitLap1 = Split50m;
+
+    StartTime = dataToStr(DiveT15,2);
+    Time25m = Split25m;
+    
+    valFinishTime = dataTableAverage{end,12} - dataTableAverage{end-1,12};
+    FinishTime = timeSecToStr2(valFinishTime);
+    RT = dataTableSkillVAL{1,22};
+    BOAll = dataTableSkillVAL{1,24};
+    BOKick_Start = KicksNb(1,1);
+    BOTime_Start = BOAll(1,2);
+    BODist_Start = BOAll(1,3);
+    BOAllINI = [BOTime_Start BODist_Start BOKick_Start];
+
+    interpolationBODist_Start = 0;
+    interpolationBOTime_Start = 0;
+end;
+KickCountLap1 = BOAllINI(1,3);
+StartBODist = roundn(BOAllINI(1,2),-1);
+StartBOTime = roundn(BOAllINI(1,1),-2);
+
+LapDist = [50];
+
+RT = timeSecToStr2(RT);
+    
+if strcmpi(answerReport, 'SP1') == 1 | strcmpi(answerReport, 'GE') == 1; 
+    valSkillTime = dataTableSkill{10,3};
+    index1 = strfind(valSkillTime, ' ');
+    index2 = strfind(valSkillTime, 's');
+    index3 = strfind(valSkillTime, '!');
+    if isempty(index3) == 0;
+        interpolationSkillTime = 1;
+    else;
+        interpolationSkillTime = 0;
+    end;
+    index = [index1 index2 index3];
+    if isempty(index) == 0;
+        valSkillTime(index) = [];
+    end;
+    valSkillTime = str2num(valSkillTime);
+    valFreeSwimTime = dataTablePacing(end,colinterest_Splits) - valSkillTime;
+
+elseif strcmpi(answerReport, 'SP2') == 1;
+    valSkillTime = DiveT15 + valFinishTime;
+    valFreeSwimTime = dataTableAverage{end,12} - valSkillTime;
+    interpolationSkillTime = 0;
+end;
+    
+SkillTime = timeSecToStr2(roundn(valSkillTime,-2));
+FreeSwimTime = timeSecToStr2(roundn(valFreeSwimTime,-2));
+if interpolationSkillTime == 1;
+    SkillTime = [SkillTime ' !'];
+    FreeSwimTime = [FreeSwimTime ' !'];
+else;
+%         SkillTime = [SkillTime '  '];
+%         FreeSwimTime = [FreeSwimTime '  '];
+end;
+
+
+%---Get SR, SC, breath and DPS
+lapLim = Course:Course:RaceDist;
+if Course == 25;
+    if RaceDist == 50;
+        dataZone(1,:) = [0 15];
+        dataZone(2,:) = [15 25];
+        dataZone(3,:) = [25 35];
+        dataZone(4,:) = [35 45];
+        dataZone(5,:) = [45 50];
+
+    elseif RaceDist == 100;
+        dataZone(1,:) = [0 15];
+        dataZone(2,:) = [15 20];
+        dataZone(3,:) = [20 25];
+        dataZone(4,:) = [25 35];
+        dataZone(5,:) = [35 45];
+        dataZone(6,:) = [45 50];
+        dataZone(7,:) = [50 60];
+        dataZone(8,:) = [60 70];
+        dataZone(9,:) = [70 75];
+        dataZone(10,:) = [75 85];
+        dataZone(11,:) = [85 95];
+        dataZone(12,:) = [95 100];
+
+    elseif RaceDist == 150;
+        dataZone(1,:) = [0 25];
+        dataZone(2,:) = [25 50];
+        dataZone(3,:) = [50 75];
+        dataZone(4,:) = [75 100];
+        dataZone(5,:) = [100 125];
+        dataZone(6,:) = [125 150];
+
+    elseif RaceDist == 200;
+        dataZone(1,:) = [0 25];
+        dataZone(2,:) = [25 50];
+        dataZone(3,:) = [50 75];
+        dataZone(4,:) = [75 100];
+        dataZone(5,:) = [100 125];
+        dataZone(6,:) = [125 150];
+        dataZone(7,:) = [150 175];
+        dataZone(8,:) = [175 200];
+
+    elseif RaceDist == 400;
+        dataZone(1,:) = [0 25];
+        dataZone(2,:) = [25 50];
+        dataZone(3,:) = [50 75];
+        dataZone(4,:) = [75 100];
+        dataZone(5,:) = [100 125];
+        dataZone(6,:) = [125 150];
+        dataZone(7,:) = [150 175];
+        dataZone(8,:) = [175 200];
+        dataZone(9,:) = [200 225];
+        dataZone(10,:) = [225 250];
+        dataZone(11,:) = [250 275];
+        dataZone(12,:) = [275 300];
+        dataZone(13,:) = [300 325];
+        dataZone(14,:) = [325 350];
+        dataZone(15,:) = [350 375];
+        dataZone(16,:) = [375 400];
+
+    elseif RaceDist == 800;
+        dataZone(1,:) = [0 25];
+        dataZone(2,:) = [25 50];
+        dataZone(3,:) = [50 75];
+        dataZone(4,:) = [75 100];
+        dataZone(5,:) = [100 125];
+        dataZone(6,:) = [125 150];
+        dataZone(7,:) = [150 175];
+        dataZone(8,:) = [175 200];
+        dataZone(9,:) = [200 225];
+        dataZone(10,:) = [225 250];
+        dataZone(11,:) = [250 275];
+        dataZone(12,:) = [275 300];
+        dataZone(13,:) = [300 325];
+        dataZone(14,:) = [325 350];
+        dataZone(15,:) = [350 375];
+        dataZone(16,:) = [375 400];
+        dataZone(17,:) = [400 425];
+        dataZone(18,:) = [425 450];
+        dataZone(19,:) = [450 475];
+        dataZone(20,:) = [475 500];
+        dataZone(21,:) = [500 525];
+        dataZone(22,:) = [525 550];
+        dataZone(23,:) = [550 575];
+        dataZone(24,:) = [575 600];
+        dataZone(25,:) = [600 625];
+        dataZone(26,:) = [625 650];
+        dataZone(27,:) = [650 675];
+        dataZone(28,:) = [675 700];
+        dataZone(29,:) = [700 725];
+        dataZone(30,:) = [725 750];
+        dataZone(31,:) = [750 775];
+        dataZone(32,:) = [775 800];
+
+    elseif RaceDist == 1500;
+        dataZone(1,:) = [0 25];
+        dataZone(2,:) = [25 50];
+        dataZone(3,:) = [50 75];
+        dataZone(4,:) = [75 100];
+        dataZone(5,:) = [100 125];
+        dataZone(6,:) = [125 150];
+        dataZone(7,:) = [150 175];
+        dataZone(8,:) = [175 200];
+        dataZone(9,:) = [200 225];
+        dataZone(10,:) = [225 250];
+        dataZone(11,:) = [250 275];
+        dataZone(12,:) = [275 300];
+        dataZone(13,:) = [300 325];
+        dataZone(14,:) = [325 350];
+        dataZone(15,:) = [350 375];
+        dataZone(16,:) = [375 400];
+        dataZone(17,:) = [400 425];
+        dataZone(18,:) = [425 450];
+        dataZone(19,:) = [450 475];
+        dataZone(20,:) = [475 500];
+        dataZone(21,:) = [500 525];
+        dataZone(22,:) = [525 550];
+        dataZone(23,:) = [550 575];
+        dataZone(24,:) = [575 600];
+        dataZone(25,:) = [600 625];
+        dataZone(26,:) = [625 650];
+        dataZone(27,:) = [650 675];
+        dataZone(28,:) = [675 700];
+        dataZone(29,:) = [700 725];
+        dataZone(30,:) = [725 750];
+        dataZone(31,:) = [750 775];
+        dataZone(32,:) = [775 800];
+        dataZone(33,:) = [800 825];
+        dataZone(34,:) = [825 850];
+        dataZone(35,:) = [850 875];
+        dataZone(36,:) = [875 900];
+        dataZone(37,:) = [900 925];
+        dataZone(38,:) = [925 950];
+        dataZone(39,:) = [950 975];
+        dataZone(40,:) = [975 1000];
+        dataZone(41,:) = [1000 1025];
+        dataZone(42,:) = [1025 1050];
+        dataZone(43,:) = [1050 1075];
+        dataZone(44,:) = [1075 1100];
+        dataZone(45,:) = [1100 1125];
+        dataZone(46,:) = [1125 1150];
+        dataZone(47,:) = [1150 1175];
+        dataZone(48,:) = [1175 1200];
+        dataZone(49,:) = [1200 1225];
+        dataZone(50,:) = [1225 1250];
+        dataZone(51,:) = [1250 1275];
+        dataZone(52,:) = [1275 1300];
+        dataZone(53,:) = [1300 1325];
+        dataZone(54,:) = [1325 1350];
+        dataZone(55,:) = [1350 1375];
+        dataZone(56,:) = [1375 1400];
+        dataZone(57,:) = [1400 1425];
+        dataZone(58,:) = [1425 1450];
+        dataZone(59,:) = [1450 1475];
+        dataZone(60,:) = [1475 1500];
+    end;
+elseif Course == 50;
+    if RaceDist == 50;
+        dataZone(1,:) = [0 15];
+        dataZone(2,:) = [15 25];
+        dataZone(3,:) = [25 35];
+        dataZone(4,:) = [35 45];
+        dataZone(5,:) = [45 50];
+
+    elseif RaceDist == 100;
+        dataZone(1,:) = [0 15];
+        dataZone(2,:) = [15 25];
+        dataZone(3,:) = [25 35];
+        dataZone(4,:) = [35 45];
+        dataZone(5,:) = [45 50];
+        dataZone(6,:) = [50 65];
+        dataZone(7,:) = [65 75];
+        dataZone(8,:) = [75 85];
+        dataZone(9,:) = [85 95];
+        dataZone(10,:) = [95 100];
+
+    elseif RaceDist == 150;
+        dataZone(1,:) = [0 25];
+        dataZone(2,:) = [25 50];
+        dataZone(3,:) = [50 75];
+        dataZone(4,:) = [75 100];
+        dataZone(5,:) = [100 125];
+        dataZone(6,:) = [125 150];
+
+    elseif RaceDist == 200;
+        dataZone(1,:) = [0 25];
+        dataZone(2,:) = [25 50];
+        dataZone(3,:) = [50 75];
+        dataZone(4,:) = [75 100];
+        dataZone(5,:) = [100 125];
+        dataZone(6,:) = [125 150];
+        dataZone(7,:) = [150 175];
+        dataZone(8,:) = [175 200];
+
+    elseif RaceDist == 400;
+        dataZone(1,:) = [0 25];
+        dataZone(2,:) = [25 50];
+        dataZone(3,:) = [50 75];
+        dataZone(4,:) = [75 100];
+        dataZone(5,:) = [100 125];
+        dataZone(6,:) = [125 150];
+        dataZone(7,:) = [150 175];
+        dataZone(8,:) = [175 200];
+        dataZone(9,:) = [200 225];
+        dataZone(10,:) = [225 250];
+        dataZone(11,:) = [250 275];
+        dataZone(12,:) = [275 300];
+        dataZone(13,:) = [300 325];
+        dataZone(14,:) = [325 350];
+        dataZone(15,:) = [350 375];
+        dataZone(16,:) = [375 400];
+
+    elseif RaceDist == 800;
+        dataZone(1,:) = [0 25];
+        dataZone(2,:) = [25 50];
+        dataZone(3,:) = [50 75];
+        dataZone(4,:) = [75 100];
+        dataZone(5,:) = [100 125];
+        dataZone(6,:) = [125 150];
+        dataZone(7,:) = [150 175];
+        dataZone(8,:) = [175 200];
+        dataZone(9,:) = [200 225];
+        dataZone(10,:) = [225 250];
+        dataZone(11,:) = [250 275];
+        dataZone(12,:) = [275 300];
+        dataZone(13,:) = [300 325];
+        dataZone(14,:) = [325 350];
+        dataZone(15,:) = [350 375];
+        dataZone(16,:) = [375 400];
+        dataZone(17,:) = [400 425];
+        dataZone(18,:) = [425 450];
+        dataZone(19,:) = [450 475];
+        dataZone(20,:) = [475 500];
+        dataZone(21,:) = [500 525];
+        dataZone(22,:) = [525 550];
+        dataZone(23,:) = [550 575];
+        dataZone(24,:) = [575 600];
+        dataZone(25,:) = [600 625];
+        dataZone(26,:) = [625 650];
+        dataZone(27,:) = [650 675];
+        dataZone(28,:) = [675 700];
+        dataZone(29,:) = [700 725];
+        dataZone(30,:) = [725 750];
+        dataZone(31,:) = [750 775];
+        dataZone(32,:) = [775 800];
+
+    elseif RaceDist == 1500;
+        dataZone(1,:) = [0 25];
+        dataZone(2,:) = [25 50];
+        dataZone(3,:) = [50 75];
+        dataZone(4,:) = [75 100];
+        dataZone(5,:) = [100 125];
+        dataZone(6,:) = [125 150];
+        dataZone(7,:) = [150 175];
+        dataZone(8,:) = [175 200];
+        dataZone(9,:) = [200 225];
+        dataZone(10,:) = [225 250];
+        dataZone(11,:) = [250 275];
+        dataZone(12,:) = [275 300];
+        dataZone(13,:) = [300 325];
+        dataZone(14,:) = [325 350];
+        dataZone(15,:) = [350 375];
+        dataZone(16,:) = [375 400];
+        dataZone(17,:) = [400 425];
+        dataZone(18,:) = [425 450];
+        dataZone(19,:) = [450 475];
+        dataZone(20,:) = [475 500];
+        dataZone(21,:) = [500 525];
+        dataZone(22,:) = [525 550];
+        dataZone(23,:) = [550 575];
+        dataZone(24,:) = [575 600];
+        dataZone(25,:) = [600 625];
+        dataZone(26,:) = [625 650];
+        dataZone(27,:) = [650 675];
+        dataZone(28,:) = [675 700];
+        dataZone(29,:) = [700 725];
+        dataZone(30,:) = [725 750];
+        dataZone(31,:) = [750 775];
+        dataZone(32,:) = [775 800];
+        dataZone(33,:) = [800 825];
+        dataZone(34,:) = [825 850];
+        dataZone(35,:) = [850 875];
+        dataZone(36,:) = [875 900];
+        dataZone(37,:) = [900 925];
+        dataZone(38,:) = [925 950];
+        dataZone(39,:) = [950 975];
+        dataZone(40,:) = [975 1000];
+        dataZone(41,:) = [1000 1025];
+        dataZone(42,:) = [1025 1050];
+        dataZone(43,:) = [1050 1075];
+        dataZone(44,:) = [1075 1100];
+        dataZone(45,:) = [1100 1125];
+        dataZone(46,:) = [1125 1150];
+        dataZone(47,:) = [1150 1175];
+        dataZone(48,:) = [1175 1200];
+        dataZone(49,:) = [1200 1225];
+        dataZone(50,:) = [1225 1250];
+        dataZone(51,:) = [1250 1275];
+        dataZone(52,:) = [1275 1300];
+        dataZone(53,:) = [1300 1325];
+        dataZone(54,:) = [1325 1350];
+        dataZone(55,:) = [1350 1375];
+        dataZone(56,:) = [1375 1400];
+        dataZone(57,:) = [1400 1425];
+        dataZone(58,:) = [1425 1450];
+        dataZone(59,:) = [1450 1475];
+        dataZone(60,:) = [1475 1500];
+    end;
+end;
+nbZones = length(dataZone(:,1));
+
+%Breath 50m, short intervals take col=2
+if dataTableBreath(3,2) == 0
+    breath15TXT = '0';
+else;
+    breath15TXT = num2str(dataTableBreath(3,2));
+end;
+if dataTableBreath(5,2) == 0;
+    breath25TXT = '0';
+else;
+    breath25TXT = num2str(dataTableBreath(5,2));
+end;
+if dataTableBreath(7,2) == 0;
+    breath35TXT = '0';
+else;
+    breath35TXT = num2str(dataTableBreath(7,2));
+end;
+if dataTableBreath(9,2) == 0;
+    breath45TXT = '0';
+else;
+    breath45TXT = num2str(dataTableBreath(9,2));
+end;
+if dataTableBreath(10,2) == 0;
+    breath50TXT = '0';
+else;
+    breath50TXT = num2str(dataTableBreath(10,2));
+end;
+BreathSum = sum(dataTableBreath(:,1));
+if BreathSum == 0
+    BreathTot = '0';
+else;
+    BreathTot = num2str(BreathSum);
+end;
+
+
+if strcmpi(answerReport, 'SP1') == 1 | strcmpi(answerReport, 'GE') == 1;
+    validIndex = [5 7 9];
+    colinterest_Speed = 6;
+    colinterest_SpeedInterp = 8;
+    Vel15m = '';
+    Vel50m = '';
+    VELTOT = [];
+    for iter = 1:length(validIndex);
+        valEC = dataTablePacing(validIndex(iter), colinterest_Speed);
+        if isempty(valEC) == 1 | isnan(valEC) == 1;
+            ValEC = '         ';
+        else;
+            VELTOT = [VELTOT valEC];
+            if dataTablePacing(validIndex(iter), colinterest_SpeedInterp) == 1;
+                ValEC = [dataToStr(valEC,2) ' !'];
+            else;
+                ValEC = [dataToStr(valEC,2) '  '];
+            end;
+        end;
+
+        if iter == 1;
+            Vel25m = ValEC;
+        elseif iter == 2;
+            Vel35m = ValEC;
+        elseif iter == 3;
+            Vel45m = ValEC;
+        end;
+    end;
+    VelAverage = [databaseCurrent{1,32} '  '];
+
+elseif strcmpi(answerReport, 'SP2') == 1;
+    %50m race so take col 3 for the speed
+    colinterest_Speed = 3;
+    colinterest_SpeedInterp = [];
+
+    VELTOT = [];
+    validIndex = [3 5 7 9 10];
+    for iter = 1:length(validIndex);
+        valEC = dataTableAverage{validIndex(iter),colinterest_Speed};
+        if isempty(valEC) == 1 | isnan(valEC) == 1;
+            ValEC = '         ';
+        else;
+            VELTOT = [VELTOT valEC];
+            ValEC = dataToStr(valEC,2);
+        end;
+
+        if iter == 1;
+            Vel15m = ValEC;
+        elseif iter == 2;
+            Vel25m = ValEC;
+        elseif iter == 3;
+            Vel35m = ValEC;
+        elseif iter == 4;
+            Vel45m = ValEC;
+        elseif iter == 5;
+            Vel50m = ValEC;
+        end;
+    end;
+    VelAverage = databaseCurrent{1,32};
+end;
+    
+
+DPSTOT = [];
+if strcmpi(answerReport, 'SP1') == 1 | strcmpi(answerReport, 'GE') == 1;
+    %it's a 50 so take col = 6 for short intervals
+    colinterest_DPS = 6;
+    colinterest_DPSInterp = 8;
+
+    validIndex = [5 7 9];
+    for iter = 1:length(validIndex);
+        valEC = dataTableStroke(validIndex(iter), colinterest_DPS);
+        if isempty(valEC) == 1 | isnan(valEC) == 1;
+            ValEC = '         ';
+        else;
+            DPSTOT = [DPSTOT valEC];
+            if dataTableStroke(validIndex(iter), colinterest_DPSInterp) == 1;
+                ValEC = [dataToStr(valEC,2) ' !'];
+            else;
+                ValEC = [dataToStr(valEC,2) '  '];
+            end;
+        end;
+
+        if iter == 1;
+            DPS25m = ValEC;
+        elseif iter == 2;
+            DPS35m = ValEC;
+        elseif iter == 3;
+            DPS45m = ValEC;
+        end;
+    end;
+    DPS15m = '         ';
+    DPS50m = '         ';
+%         DPSAverage = [dataToStr(mean(DPSTOT),2) '  '];
+    DPSAverage = [databaseCurrent{1,34} '  '];
+
+elseif strcmpi(answerReport, 'SP2') == 1;
+    %it's a 50 so take col = 9 for short intervals
+    validIndex = [3 5 7 9 10];
+    for iter = 1:length(validIndex);
+        valEC = dataTableAverage{validIndex(iter),9};
+        if isempty(valEC) == 1 | isnan(valEC) == 1;
+            ValEC = '         ';
+        else;
+            DPSTOT = [DPSTOT valEC];
+            ValEC = dataToStr(valEC,2);
+        end;
+
+        if iter == 1;
+            DPS15m = ValEC;
+        elseif iter == 2;
+            DPS25m = ValEC;
+        elseif iter == 3;
+            DPS35m = ValEC;
+        elseif iter == 4;
+            DPS45m = ValEC;
+        elseif iter == 5;
+            DPS50m = ValEC;
+        end;
+    end;
+    DPSAverage = databaseCurrent{1,34};
+end;
+
+ 
+SRTOT = [];
+if strcmpi(answerReport, 'SP1') == 1 | strcmpi(answerReport, 'GE') == 1;
+   
+    %It's a 50m so take col = 2 for short intervals
+    colinterest_SR = 2;
+    colinterest_SRInterp = 4;
+
+    validIndex = [3 5 7 9 10];
+    if isnan(dataTableStroke(end, colinterest_SR)) == 1;
+        dataTableStroke(end, colinterest_SR) = dataTableStroke(end-1, colinterest_SR);
+    end;
+    for iter = 1:length(validIndex);
+        valEC = dataTableStroke(validIndex(iter), colinterest_SR);
+        if isempty(valEC) == 1 | isnan(valEC) == 1;
+            ValEC = '         ';
+        else;
+            SRTOT = [SRTOT valEC];
+            if dataTableStroke(validIndex(iter), colinterest_SRInterp) == 1;
+                ValEC = [dataToStr(valEC,1) ' !'];
+            else;
+                ValEC = [dataToStr(valEC,1) '  '];
+            end;
+        end;
+
+        if iter == 1;
+            SR15m = ValEC;
+        elseif iter == 2;
+            SR25m = ValEC;
+        elseif iter == 3;
+            SR35m = ValEC;
+        elseif iter == 4;
+            SR45m = ValEC;
+        elseif iter == 5;
+            SR50m = ValEC;
+        end;
+    end;
+    SRAverage = [databaseCurrent{1,33} '  '];
+
+elseif strcmpi(answerReport, 'SP2') == 1;
+    
+    %It's a 50m so take col = 6 for short intervals
+    validIndex = [3 5 7 9 10];
+    for iter = 1:length(validIndex);
+        valEC = dataTableAverage{validIndex(iter),6};
+        if isempty(valEC) == 1 | isnan(valEC) == 1;
+            ValEC = '         ';
+        else;
+            SRTOT = [SRTOT valEC];
+            ValEC = dataToStr(valEC,1);
+        end;
+
+        if iter == 1;
+            SR15m = ValEC;
+        elseif iter == 2;
+            SR25m = ValEC;
+        elseif iter == 3;
+            SR35m = ValEC;
+        elseif iter == 4;
+            SR45m = ValEC;
+        elseif iter == 5;
+            SR50m = ValEC;
+        end;
+    end;
+    SRAverage = databaseCurrent{1,33};
+end;
+
+
+NbLap = (RaceDist./Course);
+keyDist = Course:Course:(NbLap*Course);
+if Source == 1 | Source == 3;
+    %It's a 50m so take col = 10 for short intervals
+    colinterest_SC = 10;
+
+    indexLapINI = 1;
+    for lapEC = 1:NbLap;
+        indexLapEND = find(dataTableRefDist == keyDist(lapEC));
+        valStrokes = dataTableStroke(indexLapINI:indexLapEND, colinterest_SC);
+        indexNAN = find(isnan(valStrokes) == 1);
+        valStrokes(indexNAN) = [];
+        Stroke_Count(lapEC) = sum(valStrokes);
+
+        indexLapINI = indexLapEND + 1;
+    end;
+elseif Source == 2;
+    %It's a 50m so take col = 15 for short intervals
+    indexLapINI = 1;
+    for lapEC = 1:NbLap;
+        indexLapEND = find(dataTableRefDist == keyDist(lapEC));
+        
+        valStrokes = dataTableAverage(indexLapINI:indexLapEND,15);
+        valStrokes = cell2mat(valStrokes);
+        indexNAN = find(isnan(valStrokes) == 1);
+        valStrokes(indexNAN) = [];
+        Stroke_Count(lapEC) = sum(valStrokes);
+
+        indexLapINI = indexLapEND + 1;
+    end;
+end;
+
+if strcmpi(answerReport, 'SP1') == 1 | strcmpi(answerReport, 'GE') == 1;
+    TimeOutSec = timeSecToStr2(dataTablePacing(5,colinterest_Splits));
+    TimeBackSec = timeSecToStr2(dataTablePacing(10,colinterest_Splits) - dataTablePacing(5,colinterest_Splits));
+    valOut = roundn(dataTablePacing(5,colinterest_Splits) ./ dataTablePacing(end,colinterest_Splits),-4);
+    TimeOutPerc = [dataToStr((valOut).*100,2) ' %'];
+    valBack = roundn((dataTablePacing(10,colinterest_Splits) - dataTablePacing(5,colinterest_Splits)) ./ dataTablePacing(end,colinterest_Splits),-4);
+    TimeBackPerc = [dataToStr((valBack).*100,2) ' %'];
+    DropOff = timeSecToStr2(dataTablePacing(10,colinterest_Splits) - dataTablePacing(5,colinterest_Splits) - dataTablePacing(5,colinterest_Splits));
+elseif strcmpi(answerReport, 'SP2') == 1;
+    midPoint = 5;
+    TimeOutSec = timeSecToStr2(dataTableAverage{midPoint,12});
+    TimeBackSec = timeSecToStr2(dataTableAverage{end,12} - dataTableAverage{midPoint,12});
+    valOut = roundn(dataTableAverage{midPoint,12} ./ dataTableAverage{end,12},-4);
+    TimeOutPerc = [dataToStr((valOut).*100,2) ' %'];
+    valBack = roundn((dataTableAverage{end,12} - dataTableAverage{midPoint,12}) ./ dataTableAverage{end,12},-4);
+    TimeBackPerc = [dataToStr((valBack).*100,2) ' %'];
+    DropOff = timeSecToStr2(dataTableAverage{end,12} - dataTableAverage{midPoint,12} -dataTableAverage{midPoint,12});
+end;
+
+
+
+%--------------------------------Top info----------------------------------
+txtLastname_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [40, window_size(4)-40, 600, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font1, 'String', AthletenameFull);
+set(txtLastname_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtRace_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [40, window_size(4)-70, 600, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font2, 'String', Race);
+set(txtRace_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtRound_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [40, window_size(4)-90, 600, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font2, 'String', Round);
+set(txtRound_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtMeet_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [40, window_size(4)-110, 600, 15], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font3, 'String', Meet);
+set(txtMeet_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtVenue_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [40, window_size(4)-125, 600, 15], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font3, 'String', Venue);
+set(txtVenue_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtDate_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [40, window_size(4)-145, 600, 15], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font2, 'String', RaceDate);
+set(txtDate_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtUser1_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [window_size(3)-640, window_size(4)-145, 600, 15], 'HorizontalAlignment', 'right', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font3, 'String', ReportDate);
+set(txtUser1_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtUser2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [window_size(3)-640, window_size(4)-160, 600, 15], 'HorizontalAlignment', 'right', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font3, 'String', AnalysisDate);
+set(txtUser2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+%--------------------------------------------------------------------------
+
+
+
+
+%--------------------------------Top table---------------------------------
+txtLegend_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [40, window_size(4)-195, window_size(3)-60, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'FontAngle', 'Italic', 'Fontsize', font3, 'String', '[ ! = Interpolated data for historical race analysis systems (GreenEye and Sparta 1)]');
+set(txtLegend_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue1_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-240, window_size(3)-60, 50], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtBlue1_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = 'Times';
+txtTitle1_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [40, window_size(4)-228, 280, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtTitle1_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = 'First Breakout';
+txtTitle2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [320, window_size(4)-228, 280, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtTitle2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = 'Pacing';
+txtTitle3_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [600, window_size(4)-228, 280, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtTitle3_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = 'Summary';
+txtTitle4_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [880, window_size(4)-228, 280, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtTitle4_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+
+txt = 'Block (s):';
+txtBlock_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [40, window_size(4)-270, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', txt);
+set(txtBlock_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = RT;
+txtBlock2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [190, window_size(4)-270, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtBlock2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = 'Start/15 m (s):';
+txtST_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [40, window_size(4)-290, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', txt);
+set(txtST_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txt = StartTime;
+txtST2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [190, window_size(4)-290, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtST2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = '25 m (s):';
+txt25m_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [40, window_size(4)-310, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', txt);
+set(txt25m_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = Time25m;
+txt25m2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [190, window_size(4)-310, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txt25m2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = 'Finish/Last 5 m (s):';
+txtFinish_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [40, window_size(4)-330, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', txt);
+set(txtFinish_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = FinishTime;
+txtFinish2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [190, window_size(4)-330, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtFinish2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+
+txt = 'Breakout time (s):';
+txtStartBOTime1_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [320, window_size(4)-270, 170, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', txt);
+set(txtStartBOTime1_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+if interpolationBOTime_Start == 1;
+    txt = [timeSecToStr2(roundn(BOAllINI(1,1),-2)) ' !'];
+else;
+    txt = [timeSecToStr2(roundn(BOAllINI(1,1),-2)) ' '];
+end;
+txtStartBOTime2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [490, window_size(4)-270, 170, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtStartBOTime2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = 'Breakout distance (m):';
+txtStartBODist1_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [320, window_size(4)-290, 170, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', txt);
+set(txtStartBODist1_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+if interpolationBODist_Start == 1;
+    txt = [dataToStr(BOAllINI(1,2), 1) ' !'];
+else;
+    txt = [dataToStr(BOAllINI(1,2), 1) ' '];
+end;
+txtStartBODist2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [490, window_size(4)-290, 170, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtStartBODist2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+
+txt = 'Out (s):';
+txtOut_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [600, window_size(4)-270, 100, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', txt);
+set(txtOut_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = [TimeOutSec '   (' TimeOutPerc ')'];
+txtOut2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [730, window_size(4)-270, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtOut2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = 'Back (s):';
+txtBack_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [600, window_size(4)-290, 100, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', txt);
+set(txtBack_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = [TimeBackSec '   (' TimeBackPerc ')'];
+txtBack2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [730, window_size(4)-290, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtBack2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = 'Drop off (s):';
+txtDropOff_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [600, window_size(4)-310, 100, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', txt);
+set(txtDropOff_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = DropOff;
+txtDropOff2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [730, window_size(4)-310, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtDropOff2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+
+txt = 'Total time (s):';
+txtTT_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [880, window_size(4)-270, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', txt);
+set(txtTT_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = RaceTime;
+txtTT2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1030, window_size(4)-270, 100, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtTT2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = 'Total skill time (s):';
+txtSkillT_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [880, window_size(4)-290, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', txt);
+set(txtSkillT_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = SkillTime;
+txtSkillT2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1030, window_size(4)-290, 100, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtSkillT2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = 'Total free swim (s):';
+txtFreeT_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [880, window_size(4)-310, 150, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', txt);
+set(txtFreeT_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txt = FreeSwimTime;
+txtFreeT2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1030, window_size(4)-310, 100, 20], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', txt);
+set(txtFreeT2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+%--------------------------------------------------------------------------
+
+
+
+
+
+
+%--------------------------------Top table---------------------------------
+txtBlue2_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-400, window_size(3)-60, 50], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtBlue2_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue5_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-385, 120, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Bold', 'Fontsize', font4, 'String', 'Segment');
+set(txtBlue5_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue6a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-385, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'Vel');
+set(txtBlue6a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtBlue6b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-400, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'normal', 'Fontsize', font3, 'String', '(m/s)');
+set(txtBlue6b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue7a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-385, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'SR');
+set(txtBlue7a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtBlue7b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-400, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'normal', 'Fontsize', font3, 'String', '(str/min)');
+set(txtBlue7b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue8a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-385, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'DPS');
+set(txtBlue8a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtBlue8b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-400, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'normal', 'Fontsize', font3, 'String', '(m)');
+set(txtBlue8b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue9_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [330, window_size(4)-385, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'Strokes');
+set(txtBlue9_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue10_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [390, window_size(4)-385, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'Breaths');
+set(txtBlue10_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue11_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [450, window_size(4)-385, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'Kicks');
+set(txtBlue11_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue12a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [510, window_size(4)-385, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'Breakout');
+set(txtBlue12a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtBlue12b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [510, window_size(4)-400, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'normal', 'Fontsize', font3, 'String', '(m)');
+set(txtBlue12b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue13a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [570, window_size(4)-385, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'In');
+set(txtBlue13a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtBlue13b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [570, window_size(4)-400, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'normal', 'Fontsize', font3, 'String', '(s)');
+set(txtBlue13b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue14a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [630, window_size(4)-385, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'Out');
+set(txtBlue14a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtBlue14b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [630, window_size(4)-400, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'normal', 'Fontsize', font3, 'String', '(s)');
+set(txtBlue14b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue15a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [690, window_size(4)-385, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'Turn');
+set(txtBlue15a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtBlue15b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [690, window_size(4)-400, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'normal', 'Fontsize', font3, 'String', '(s)');
+set(txtBlue15b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue16_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [750, window_size(4)-385, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'TI');
+set(txtBlue16_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue17_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [810, window_size(4)-385, 72, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'Split');
+set(txtBlue17_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue18_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [882 window_size(4)-385, 72, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', 'Lap');
+set(txtBlue18_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue19_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [954, window_size(4)-385, 72, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', '100 m');
+set(txtBlue19_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue20_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1026, window_size(4)-385, 72, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', '200 m');
+set(txtBlue20_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtBlue21_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1098, window_size(4)-385, 72, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.7 0.88 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'bold', 'Fontsize', font4, 'String', '500 m');
+set(txtBlue21_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txtCol1a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-430, 120, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol1a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol1A_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-425, 120, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '0         -        15');
+set(txtCol1A_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol1b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-460, 120, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.88 0.92 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol1b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol1B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-455, 120, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.88 0.92 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '15        -        25');
+set(txtCol1B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol1c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-490, 120, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol1c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol1C_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-485, 120, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '25        -        35');
+set(txtCol1C_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol1d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-520, 120, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.88 0.92 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol1d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol1D_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-515, 120, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.88 0.92 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '35        -        45');
+set(txtCol1D_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol1e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-550, 120, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol1e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol1E_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-545, 120, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [1 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '45        -        50');
+set(txtCol1E_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol1f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-580, 120, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.97 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol1f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol1F_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-575, 120, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.97 0.97 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', 'Race Averages');
+set(txtCol1F_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txtCol2a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-430, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.99 0.96], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol2a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol2A_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-425, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.97 0.99 0.96], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', Vel15m);
+set(txtCol2A_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol2b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-460, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.86 0.9 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol2b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol2B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-455, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.86 0.9 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', Vel25m);
+set(txtCol2B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol2c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-490, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.99 0.96], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol2c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol2C_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-485, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.97 0.99 0.96], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', Vel35m);
+set(txtCol2C_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol2d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-520, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.86 0.9 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol2d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol2D_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-515, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.86 0.9 0.9], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', Vel45m);
+set(txtCol2D_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol2e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-550, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.99 0.96], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol2e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol2E_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-545, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.97 0.99 0.96], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', Vel50m);
+set(txtCol2E_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol2f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-580, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.95 0.95 0.83], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol2f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol2F_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [150, window_size(4)-575, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.95 0.95 0.83], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', VelAverage);
+set(txtCol2F_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol3a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-430, 180, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol3a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol3A_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-425, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', SR15m);
+set(txtCol3A_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol3b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-460, 180, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.88 0.89 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol3b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol3B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-455, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.88 0.89 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', SR25m);
+set(txtCol3B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol3c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-490, 180, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol3c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol3C_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-485, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', SR35m);
+set(txtCol3C_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol3d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-520, 180, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.88 0.89 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol3d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol3D_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-515, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.88 0.89 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', SR45m);
+set(txtCol3D_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol3e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-550, 180, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol3e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol3E_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-545, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', SR50m);
+set(txtCol3E_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol3f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-580, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.99 0.93 0.80], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol3f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol3F_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [210, window_size(4)-575, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.99 0.93 0.80], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', SRAverage);
+set(txtCol3F_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txtCol4a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-430, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol4a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol4A_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-425, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', DPS15m);
+set(txtCol4A_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol4b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-460, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.88 0.89 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol4b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol4B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-455, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.88 0.89 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', DPS25m);
+set(txtCol4B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol4c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-490, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol4c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol4C_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-485, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', DPS35m);
+set(txtCol4C_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol4d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-520, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.88 0.89 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol4d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol4D_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-515, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.88 0.89 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', DPS45m);
+set(txtCol4D_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol4e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-550, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol4e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol4E_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-545, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', DPS50m);
+set(txtCol4E_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol4f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-580, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.99 0.93 0.80], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol4f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol4F_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [270, window_size(4)-575, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.99 0.93 0.80], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', DPSAverage);
+set(txtCol4F_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol5a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [330, window_size(4)-430, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol5a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol5b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [330, window_size(4)-460, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.88 0.89 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol5b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol5B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [330, window_size(4)-455, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.88 0.89 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol5B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol5c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [330, window_size(4)-490, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol5c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol5d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [330, window_size(4)-520, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.88 0.89 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol5d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol5e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [330, window_size(4)-550, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol5e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol5E_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [330, window_size(4)-545, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.98 0.97 0.91], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', num2str(Stroke_Count(1)));
+set(txtCol5E_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol5f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [330, window_size(4)-580, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.99 0.93 0.80], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol5f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txtCol6a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [390, window_size(4)-430, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol6a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol6A_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [390, window_size(4)-425, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.98 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', breath15TXT);
+set(txtCol6A_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol6b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [390, window_size(4)-460, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.87 0.91 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol6b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol6B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [390, window_size(4)-455, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.87 0.91 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', breath25TXT);
+set(txtCol6B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol6c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [390, window_size(4)-490, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol6c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol6C_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [390, window_size(4)-485, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.98 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', breath35TXT);
+set(txtCol6C_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol6d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [390, window_size(4)-520, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.87 0.91 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol6d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol6D_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [390, window_size(4)-515, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.87 0.91 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', breath45TXT);
+set(txtCol6D_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol6e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [390, window_size(4)-550, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol6e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol6E_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [390, window_size(4)-545, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.98 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', breath50TXT);
+set(txtCol6E_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol6f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [390, window_size(4)-580, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.96 0.96 0.84], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol6f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txtCol7a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [450, window_size(4)-430, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol7a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol7A_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [450, window_size(4)-425, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.98 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', num2str(KickCountLap1));
+set(txtCol7A_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol7b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [450, window_size(4)-460, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.87 0.91 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol7b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol7B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [450, window_size(4)-455, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.87 0.91 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol7B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol7c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [450, window_size(4)-490, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol7c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol7d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [450, window_size(4)-520, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.87 0.91 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol7d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol7e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [450, window_size(4)-550, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.98 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol7e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol7E_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [450, window_size(4)-545, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.98 1 1], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol7E_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol7f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [450, window_size(4)-580, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.96 0.96 0.84], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol7f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txtCol8a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [510, window_size(4)-430, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol8a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol8A_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [510, window_size(4)-425, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', StartBODist);
+set(txtCol8A_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol8b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [510, window_size(4)-460, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol8b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol8c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [510, window_size(4)-490, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String','');
+set(txtCol8c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol8C_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [510, window_size(4)-485, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String',  '');
+set(txtCol8C_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol8d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [510, window_size(4)-520, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol8d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol8e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [510, window_size(4)-550, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol8e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol8f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [510, window_size(4)-580, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.94 0.93 0.84], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol8f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txtCol9a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [569, window_size(4)-430, 62, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol9a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol9b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [569, window_size(4)-460, 62, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol9b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol9B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [569, window_size(4)-455, 62, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol9B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol9c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [569, window_size(4)-490, 62, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol9c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol9d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [569, window_size(4)-520, 62, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol9d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol9e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [569, window_size(4)-550, 62, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol9e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol9f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [569, window_size(4)-580, 62, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.94 0.93 0.84], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol9f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol9F_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [569, window_size(4)-575, 62, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.94 0.93 0.84], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol9F_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txtCol10a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [630, window_size(4)-430, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol10a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol10b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [630, window_size(4)-460, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol10b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol10B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [630, window_size(4)-455, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol10B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol10c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [630, window_size(4)-490, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol10c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol10d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [630, window_size(4)-520, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol10d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol10e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [630, window_size(4)-550, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol10e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol10f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [630, window_size(4)-580, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.94 0.93 0.84], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol10f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol10F_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [630, window_size(4)-575, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.94 0.93 0.84], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol10F_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol11a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [690, window_size(4)-430, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol11a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol11b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [690, window_size(4)-460, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol11b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol11B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [690, window_size(4)-455, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol11B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol11c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [690, window_size(4)-490, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol11c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol11d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [690, window_size(4)-520, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol11d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol11e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [690, window_size(4)-550, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol11e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol11f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [690, window_size(4)-580, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.94 0.93 0.84], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol11f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol11F_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [690, window_size(4)-575, 60, 20], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.94 0.93 0.84], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol11F_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol12a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [750, window_size(4)-430, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol12a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol12b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [750, window_size(4)-460, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol12b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+% txtCol12B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+%     'position', [690, window_size(4)-455, 60, 20], 'HorizontalAlignment', 'center', ...
+%     'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+%     'FontWeight', 'Normal', 'Fontsize', font4, 'String', TurnIndex1);
+% set(txtCol12B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol12c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [750, window_size(4)-490, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol12c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol12d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [750, window_size(4)-520, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.85 0.89 0.93], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol12d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol12e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [750, window_size(4)-550, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.96 0.98], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol12e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol12f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [750, window_size(4)-580, 60, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.94 0.93 0.84], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol12f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+% txtCol12F_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+%     'position', [690, window_size(4)-575, 60, 20], 'HorizontalAlignment', 'center', ...
+%     'BackgroundColor', [0.94 0.93 0.84], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+%     'FontWeight', 'Normal', 'Fontsize', font4, 'String', TurnIndex1_Average);
+% set(txtCol12F_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol13a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [810, window_size(4)-430, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 0.99 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol13a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol13A_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [810, window_size(4)-435, 72, 30], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [1 0.99 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', Split15m);
+set(txtCol13A_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol13b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [810, window_size(4)-460, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.89 0.93 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol13b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol13B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [810, window_size(4)-465, 72, 30], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.89 0.93 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', Split25m);
+set(txtCol13B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol13c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [810, window_size(4)-490, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 0.99 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol13c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol13C_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [810, window_size(4)-495, 72, 30], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [1 0.99 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', Split35m);
+set(txtCol13C_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol13d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [810, window_size(4)-520, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.89 0.93 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol13d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol13D_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [810, window_size(4)-525, 72, 30], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.89 0.93 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', Split45m);
+set(txtCol13D_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol13e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [810, window_size(4)-550, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 0.99 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol13e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol13E_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [810, window_size(4)-555, 72, 30], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [1 0.99 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', Split50m);
+set(txtCol13E_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol13f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [810, window_size(4)-580, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.97 0.82], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol13f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txtCol14a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [882, window_size(4)-430, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 0.99 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol14a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol14b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [882, window_size(4)-460, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.89 0.93 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol14b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol14B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [882, window_size(4)-465, 72, 30], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [0.89 0.93 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol14B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol14c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [882, window_size(4)-490, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 0.99 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol14c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol14d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [882, window_size(4)-520, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.89 0.93 0.89], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol14d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol14e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [882, window_size(4)-550, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [1 0.99 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol14e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+txtCol14B_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [882, window_size(4)-555, 72, 30], 'HorizontalAlignment', 'center', ...
+    'BackgroundColor', [1 0.99 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', Split50m);
+set(txtCol14B_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol14f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [882, window_size(4)-580, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.97 0.97 0.82], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol14f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txtCol15a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [954, window_size(4)-430, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.96 0.96 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol15a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol15b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [954, window_size(4)-460, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.84 0.88 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol15b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol15c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [954, window_size(4)-490, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.96 0.96 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol15c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol15d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [954, window_size(4)-520, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.84 0.88 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol15d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol15e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [954, window_size(4)-550, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.96 0.96 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol15e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol15f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [954, window_size(4)-580, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.93 0.93 0.81], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol15f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txtCol16a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1026, window_size(4)-430, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.96 0.96 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol16a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol16b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1026, window_size(4)-460, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.84 0.88 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol16b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol16c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1026, window_size(4)-490, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.96 0.96 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol16c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol16d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1026, window_size(4)-520, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.84 0.88 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol16d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol16e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1026, window_size(4)-550, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.96 0.96 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol16e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol16f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1026, window_size(4)-580, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.93 0.93 0.81], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol16f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+txtCol17a_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1098, window_size(4)-430, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.96 0.96 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol17a_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol17b_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1098, window_size(4)-460, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.84 0.88 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol17b_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol17c_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1098, window_size(4)-490, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.96 0.96 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol17c_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol17d_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1098, window_size(4)-520, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.84 0.88 0.92], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol17d_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol17e_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1098, window_size(4)-550, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.96 0.96 0.94], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol17e_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+txtCol17f_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [1098, window_size(4)-580, 72, 30], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0.93 0.93 0.81], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtCol17f_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+
+
+
+txtBlack_pdf = uicontrol('parent', hdef, 'Style', 'Text', 'Visible', 'on', 'units', 'pixels', ...
+    'position', [30, window_size(4)-580, 1140, 1], 'HorizontalAlignment', 'left', ...
+    'BackgroundColor', [0 0 0], 'ForegroundColor', [0 0 0], 'FontName', 'Arial', ...
+    'FontWeight', 'Normal', 'Fontsize', font4, 'String', '');
+set(txtBlack_pdf, 'fontunits', 'normalized', 'units', 'normalized');
+%--------------------------------------------------------------------------
+
+
+handles2.filename = filename;
+handles2.hdef = hdef;
+handles2.RaceDist = LapDist(end);
+guidata(handles2.hdef, handles2);
+

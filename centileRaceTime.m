@@ -1,0 +1,202 @@
+%centile and diff to best for race time
+timeEC = [];
+if isempty(LegOption) == 1 | strcmpi(LegOption, 'All Legs');
+    colACT = 14;
+    classifier = databaseGroup(:,colACT);
+    if valPB == 2;
+        %filter down to PB, SB, CB (based on race time)
+        classifierName = databaseGroup(:,2);
+        colsource = 'RaceTime';
+        [classifierFILT, likeepPBs] = PBfilter(classifier, classifierName, colsource);
+        classifier = classifierFILT;
+        databaseGroup = databaseGroup(likeepPBs,:);    
+    end;
+    databaseGroupTime = databaseGroup;
+    
+    for i = 1:length(databaseGroup(:,1));
+        val = classifier{i,1};
+        liSec = strfind(val, ' s');
+        if isempty(liSec) == 0;
+            timeEC(i,1) = str2num(val(1:5));
+        else;
+            lidot = strfind(val, ':');
+            min = str2num(val(1:lidot-1)).*60;
+            sec = str2num(val(lidot+1:lidot+3));
+            hun = str2num(['0.' val(end-1:end)]);
+            timeEC(i,1) = min+sec+hun;
+        end;
+    end;
+
+else;
+    colACT = 51;
+    timeEC = [];
+    classifier = [];
+    for i = 1:length(databaseGroup(:,colACT));
+        val = databaseGroup{i,colACT};
+        if strcmpi(LegOption, 'Butterfly Only');
+            leg_ini = 1;
+            leg_end = leg_ini + (NbLap./4) - 1;
+        elseif strcmpi(LegOption, 'Backstroke Only');
+            leg_ini = (NbLap./4) + 1;
+            leg_end = leg_ini + (NbLap./4) - 1;
+        elseif strcmpi(LegOption, 'Breaststroke Only');
+            leg_ini = (2.*(NbLap./4)) + 1;
+            leg_end = leg_ini + (NbLap./4) - 1;
+        elseif strcmpi(LegOption, 'Freestyle Only');
+            leg_ini = (3.*(NbLap./4)) + 1;
+            leg_end = leg_ini + (NbLap./4) - 1;
+        end;
+        classifier(i,1) = sum(val(leg_ini:leg_end));
+    end;
+    if valPB == 2;
+        %filter down to PB, SB, CB (based on race time)
+        classifierName = databaseGroup(:,2);
+        colsource = 'LapTime';
+        [classifierFILT, likeepPBs] = PBfilter(classifier, classifierName, colsource);
+        classifier = classifierFILT;
+        databaseGroup = databaseGroup(likeepPBs,:);    
+    end;
+    databaseGroupTime = databaseGroup;
+    timeEC = classifier;
+end;
+
+[timeEC, index] = sort(timeEC, 'Ascend');
+indexRaceTime = index;
+namelist = databaseGroup(index,2);
+nameBestRaceTime = namelist{1,1};
+databaseGroupTime = databaseGroupTime(index,:);
+
+if graphType == 4;
+    timeECSelect = [];
+    if isempty(LegOption) == 1 | strcmpi(LegOption, 'All Legs');
+        classifier = databaseSelect(:,colACT);
+        for i = 1:length(databaseSelect(:,1));
+            val = classifier{i,1};
+            liSec = strfind(val, ' s');
+            if isempty(liSec) == 0;
+                timeECSelect(i,1) = str2num(val(1:5));
+            else;
+                lidot = strfind(val, ':');
+                min = str2num(val(1:lidot-1)).*60;
+                sec = str2num(val(lidot+1:lidot+3));
+                hun = str2num(['0.' val(end-1:end)]);
+                timeECSelect(i,1) = min+sec+hun;
+            end;
+        end;
+    else;
+        for i = 1:length(databaseSelect(:,colACT));
+            val = databaseSelect{i,colACT};
+            classifier(i,1) = sum(val(leg_ini:leg_end));
+        end;
+        timeECSelect = classifier;
+    end;
+    [timeECSelect, indexSelect] = sort(timeECSelect, 'Ascend');
+end;
+
+for loop = 1:3;
+    if loop == 1
+        val = databaseCurrent{1,colACT};
+        
+    elseif loop == 2;
+        if isempty(databaseCurrentPB) == 0;
+            val = databaseCurrentPB{1,colACT};
+        else;
+            if isempty(LegOption) == 1 | strcmpi(LegOption, 'All Legs');
+                val = '00000 s';
+            else;
+                val = zeros(1,NbLap);
+            end;
+        end;
+        
+    elseif loop == 3;
+        if isempty(databaseCurrentSB) == 0;
+            val = databaseCurrentSB{1,colACT};
+        else;
+            if isempty(LegOption) == 1 | strcmpi(LegOption, 'All Legs');
+                val = '00000 s';
+            else;
+                val = zeros(1,NbLap);
+            end;
+        end;
+    end;
+    
+    if isempty(LegOption) == 1 | strcmpi(LegOption, 'All Legs');
+        liSec = strfind(val, ' s');
+        if isempty(liSec) == 0;
+            timeACT = str2num(val(1:5));
+        else;
+            lidot = strfind(val, ':');
+            min = str2num(val(1:lidot-1)).*60;
+            sec = str2num(val(lidot+1:lidot+3));
+            hun = str2num(['0.' val(end-1:end)]);
+            timeACT = min+sec+hun;
+        end;
+    else;
+        timeACT = sum(val(leg_ini:leg_end));
+    end;
+    diffTime = timeEC-timeACT;
+    index = find(diffTime >= 0); %if < 0, slower than the current athlete
+    if isempty(index) == 1;
+        index = length(timeEC);
+    end;
+    if loop == 1;
+        if graphType == 1;
+            startGroup = 1;
+            endGroup = 1;
+        elseif graphType == 2;
+            startGroup = 1;
+            endGroup = 3;
+        elseif graphType == 3;
+            startGroup = 1;
+            endGroup = 8;
+        elseif graphType == 4;
+            startGroup = 1;
+            endGroup = 1;
+        end;
+        timeRef = mean(timeEC(startGroup:endGroup));
+
+        posRaceTime = index(1);
+        rankRaceTime = roundn(((index(1))./length(timeEC)).*100,-1);
+        
+        if graphType == 4;
+            diff2bestRaceTime = [timeACT-timeECSelect timeACT timeECSelect];
+        else;
+            diff2bestRaceTime = [timeACT-timeRef timeACT timeRef];
+        end;
+        
+    elseif loop == 2
+        if isempty(databaseCurrentPB) == 0;
+            posRaceTimePB = index(1);
+            rankRaceTimePB = roundn(((index(1))./length(timeEC)).*100,-1);
+            
+            if graphType == 4;
+                diff2bestRaceTimePB = [timeACT-timeECSelect timeACT timeECSelect];
+            else;
+                diff2bestRaceTimePB = [timeACT-timeRef timeACT timeRef];
+            end;
+        else;
+            posRaceTimePB = 0;
+            rankRaceTimePB = 0;
+            diff2bestRaceTimePB = [0 0 0];
+        end;
+    elseif loop == 3;
+        if isempty(databaseCurrentSB) == 0;
+            posRaceTimeSB = index(1);
+            rankRaceTimeSB = roundn(((index(1))./length(timeEC)).*100,-1);
+            
+            if graphType == 4;
+                diff2bestRaceTimeSB = [timeACT-timeECSelect timeACT timeECSelect];
+            else;
+                diff2bestRaceTimeSB = [timeACT-timeRef timeACT timeRef];
+            end;
+        else;
+            posRaceTimeSB = 0;
+            rankRaceTimeSB = 0;
+            diff2bestRaceTimeSB = [0 0 0];
+        end;
+    end;
+end;
+handles.diff2bestRaceTime = diff2bestRaceTime;
+handles.rankRaceTime = rankRaceTime;
+handles.databaseGroup_profile = databaseGroup;
+handles.posRaceTime = posRaceTime;
