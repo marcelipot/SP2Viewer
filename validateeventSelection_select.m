@@ -1,0 +1,53 @@
+function [] = validateeventSelection_select(varargin);
+
+
+fh = findobj(0, 'type', 'figure');
+set(0, 'CurrentFigure', fh(1).Number);
+handles2 = guidata(gcf);
+
+if isempty(handles2.SelectedStroke) == 1;
+    herror = errordlg('Please select a stroke', 'Error');
+    if ispc == 1;
+        MDIR = getenv('USERPROFILE');
+        jFrame=get(handle(herror), 'javaframe');
+        jicon = javax.swing.ImageIcon([MDIR '\SP2Viewer\SpartaViewer_IconSoftware.png']);
+        jFrame.setFigureIcon(jicon);
+        clc;
+    end;
+    return;
+end;
+if isempty(handles2.SelectedDistance) == 1;
+    herror = errordlg('Please select a distance', 'Error');
+    if ispc == 1;
+        MDIR = getenv('USERPROFILE');
+        jFrame=get(handle(herror), 'javaframe');
+        jicon = javax.swing.ImageIcon([MDIR '\SP2Viewer\SpartaViewer_IconSoftware.png']);
+        jFrame.setFigureIcon(jicon);
+        clc;
+    end;
+    return;
+end;
+if isempty(handles2.SelectedPool) == 1;
+    herror = errordlg('Please select a stroke', 'Error');
+    if ispc == 1;
+        MDIR = getenv('USERPROFILE');
+        jFrame=get(handle(herror), 'javaframe');
+        jicon = javax.swing.ImageIcon([MDIR '\SP2Viewer\SpartaViewer_IconSoftware.png']);
+        jFrame.setFigureIcon(jicon);
+        clc;
+    end;
+    return;
+end;
+if isempty(handles2.SelectedRelay) == 1;
+    herror = errordlg('Please select flat or a relay', 'Error');
+    if ispc == 1;
+        MDIR = getenv('USERPROFILE');
+        jFrame=get(handle(herror), 'javaframe');
+        jicon = javax.swing.ImageIcon([MDIR '\SP2Viewer\SpartaViewer_IconSoftware.png']);
+        jFrame.setFigureIcon(jicon);
+        clc;
+    end;
+    return;
+end;
+
+uiresume(gcf);

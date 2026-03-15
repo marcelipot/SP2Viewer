@@ -1,0 +1,64 @@
+function [maxYRightaxis, minYRightaxis, SplittextPos1, SplittextPos2, SplittextPos3, SplittextPos4] = UpdateSplitsVisibility(...
+    axesGraphPacing, statusSplits, statusSR, statusBreath, SplittextPos1, SplittextPos2, SplittextPos3, SplittextPos4, graph1Pacing_maxYRight);
+
+            
+yyaxis(axesGraphPacing, 'right');
+if statusSplits == 1;
+    if statusSR == 1;
+        if statusBreath == 0;
+            set(SplittextPos1, 'Visible', 'on');
+            set(SplittextPos2, 'Visible', 'off');
+            set(SplittextPos3, 'Visible', 'off');
+            set(SplittextPos4, 'Visible', 'off');
+            maxYRightaxis = graph1Pacing_maxYRight;
+            minYRightaxis = 1;
+        else;
+            set(SplittextPos1, 'Visible', 'off');
+            set(SplittextPos2, 'Visible', 'on');
+            set(SplittextPos3, 'Visible', 'off');
+            set(SplittextPos4, 'Visible', 'off');
+            maxYRightaxis = graph1Pacing_maxYRight;
+            minYRightaxis = 0;
+        end;
+    else;
+        if statusBreath == 0;
+            set(SplittextPos1, 'Visible', 'off');
+            set(SplittextPos2, 'Visible', 'off');
+            set(SplittextPos3, 'Visible', 'on');
+            set(SplittextPos4, 'Visible', 'off');
+            maxYRightaxis = 1;
+            minYRightaxis = 0.5;
+        else;
+            set(SplittextPos1, 'Visible', 'off');
+            set(SplittextPos2, 'Visible', 'off');
+            set(SplittextPos3, 'Visible', 'off');
+            set(SplittextPos4, 'Visible', 'on');
+            maxYRightaxis = 1;
+            minYRightaxis = 0;
+        end;
+    end;
+else;
+    set(SplittextPos1, 'Visible', 'off');
+    set(SplittextPos2, 'Visible', 'off');
+    set(SplittextPos3, 'Visible', 'off');
+    set(SplittextPos4, 'Visible', 'off');
+    if statusSR == 1;
+        if statusBreath == 0;
+            maxYRightaxis = graph1Pacing_maxYRight;
+            minYRightaxis = 1;
+        else;
+            maxYRightaxis = graph1Pacing_maxYRight;
+            minYRightaxis = 0;
+        end;
+    else;
+        if statusBreath == 0;
+            maxYRightaxis = 1;
+            minYRightaxis = 0.5;
+        else;
+            maxYRightaxis = 1;
+            minYRightaxis = 0;
+        end;
+    end;
+end;
+            
+            
