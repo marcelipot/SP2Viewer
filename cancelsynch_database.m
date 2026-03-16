@@ -1,0 +1,23 @@
+function [] = cancelsynch_database(varargin);
+
+
+handles2 = guidata(gcf);
+%uiresume(handles2.hf_w2_welcome);
+
+isrunning = get(handles2.proceedprocess_main, 'String');
+if strcmpi(isrunning, 'running');
+    set(handles2.proceedprocess_main, 'String', 'initial');
+else;
+    uiresume;
+    fh = findobj(0,'type','figure');
+    nfh=length(fh); % Total number of open figures, including GUI and figures with visibility 'off'
+    % Scan through open figures - GUI figure number is [] (i.e. size is zero)
+    for i = 1:nfh;
+        % Close all figures with a Number size is greater than zero
+        if strcmpi((fh(i).Name), 'Synchronisation') == 1;
+    %         figure(fh(i).Number);
+            close(fh(i).Number);
+        end;
+    end;
+end;
+%guidata(handles.hf_w1_welcome, handles);

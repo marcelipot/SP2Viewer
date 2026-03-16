@@ -1,0 +1,17 @@
+function [] = filterpoppool_database(varargin);
+
+
+handles = guidata(gcf);
+val = get(handles.filterpop_pool_database, 'value');
+if val == handles.SearchPoolType;
+    return;
+end;
+
+if val == 1;
+    handles.SearchPoolType = [];
+else;
+    handles.SearchPoolType = val;
+end;
+
+handles.sortbyExceptionSelection = 1;
+guidata(handles.hf_w1_welcome, handles);
